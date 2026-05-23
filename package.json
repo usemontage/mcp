@@ -3,6 +3,19 @@
   "version": "0.1.0",
   "description": "MCP server for the Montage API - production UI on demand",
   "license": "MIT",
+  "homepage": "https://usemontage.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usemontage/mcp.git"
+  },
+  "keywords": [
+    "montage",
+    "ai",
+    "mcp",
+    "model-context-protocol",
+    "ui",
+    "agent"
+  ],
   "type": "module",
   "bin": {
     "montage-mcp": "dist/index.js"

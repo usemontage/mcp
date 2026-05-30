@@ -3,7 +3,7 @@ import type { MontageApiClient } from "../src/client.js";
 import { createClientFromEnv, registerMontageTools } from "../src/server.js";
 
 describe("server registration", () => {
-  it("registers all seven Montage MCP tools", () => {
+  it("registers all Montage MCP tools", () => {
     const registered: Array<{ name: string; config: { description?: string } }> = [];
     const registrar = {
       registerTool: vi.fn((name: string, config: { description?: string }) => {
@@ -15,6 +15,7 @@ describe("server registration", () => {
 
     expect(registered.map((tool) => tool.name)).toEqual([
       "montage_generate",
+      "montage_stream",
       "montage_get_artifact",
       "montage_list_artifacts",
       "montage_get_versions",
@@ -22,7 +23,7 @@ describe("server registration", () => {
       "montage_configure_adapter",
       "montage_list_adapters",
     ]);
-    expect(registrar.registerTool).toHaveBeenCalledTimes(7);
+    expect(registrar.registerTool).toHaveBeenCalledTimes(8);
     expect(registered.every((tool) => tool.config.description)).toBe(true);
   });
 
@@ -31,4 +32,3 @@ describe("server registration", () => {
     expect(() => createClientFromEnv({ MONTAGE_API_KEY: "mtg_sk_test" })).not.toThrow();
   });
 });
-

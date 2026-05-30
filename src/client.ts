@@ -3,6 +3,7 @@ import type {
   GenerateInput,
   GetVersionsInput,
   ListArtifactsInput,
+  StreamInput,
 } from "./schemas.js";
 
 const DEFAULT_BASE_URL = "https://api.usemontage.ai";
@@ -54,6 +55,62 @@ export class MontageApiClient {
       dataInfo: input.dataInfo ?? "",
     };
     return this.request<Record<string, unknown>>("POST", "/v1/generate", { body });
+  }
+
+  async stream(input: StreamInput): Promise<Record<string, unknown>> {
+    const body = {
+      ...input,
+      dataInfo: input.dataInfo ?? "",
+      streaming: true,
+      includeHtml: input.includeHtml ?? true,
+    };
+    const url = buildUrl(this.baseUrl, "/v1/generate");
+    const response = await this.fetchImpl(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "text/event-stream, application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const data = await readResponseBody(response);
+      throw toApiError(response.status, data);
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/event-stream")) {
+      const data = await readResponseBody(response);
+      const result = isRecord(data) ? data : { result: data };
+      return {
+        events: [
+          {
+            type: "artifact",
+            ...(typeof result.html === "string" ? { html: result.html } : {}),
+            ...(typeof result.id === "string" ? { id: result.id } : {}),
+            ...(typeof result.artifactId === "string" ? { artifactId: result.artifactId } : {}),
+            ...(typeof result.creditsUsed === "number" ? { creditsUsed: result.creditsUsed } : {}),
+          },
+        ],
+        html: typeof result.html === "string" ? result.html : undefined,
+        ...result,
+      };
+    }
+
+    const raw = await response.text();
+    const events = parseSseEvents(raw);
+    const finalEvent = [...events].reverse().find((event) =>
+      (event.type === "done" || event.type === "artifact") && typeof event.html === "string"
+    );
+    return {
+      events,
+      eventTypes: events.map((event) => event.type).filter((type): type is string => typeof type === "string"),
+      html: typeof finalEvent?.html === "string" ? finalEvent.html : undefined,
+      artifactId: typeof finalEvent?.artifactId === "string" ? finalEvent.artifactId : undefined,
+      creditsUsed: typeof finalEvent?.creditsUsed === "number" ? finalEvent.creditsUsed : undefined,
+    };
   }
 
   async getArtifact(artifactId: string): Promise<Record<string, unknown>> {
@@ -115,6 +172,26 @@ export class MontageApiClient {
     }
     return data as T;
   }
+}
+
+function parseSseEvents(raw: string): Record<string, unknown>[] {
+  const events: Record<string, unknown>[] = [];
+  for (const block of raw.split(/\r?\n\r?\n/)) {
+    const data = block
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n")
+      .trim();
+    if (!data) continue;
+    try {
+      const parsed = JSON.parse(data);
+      if (isRecord(parsed)) events.push(parsed);
+    } catch {
+      // Ignore malformed progress chunks; MCP consumers receive valid events only.
+    }
+  }
+  return events;
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -183,4 +260,3 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
-

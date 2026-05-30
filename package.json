@@ -30,6 +30,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
     "test": "vitest run",
+    "proof:agents": "npm run build && tsx examples/agents/mcp-client-smoke.ts",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

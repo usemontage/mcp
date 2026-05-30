@@ -9,11 +9,13 @@ import {
   ListAdaptersInputSchema,
   ListArtifactsInputSchema,
   ListComponentsInputSchema,
+  StreamInputSchema,
 } from "./schemas.js";
 import { handleConfigureAdapter, handleListAdapters } from "./tools/adapters.js";
 import { handleGetArtifact, handleGetVersions, handleListArtifacts } from "./tools/artifacts.js";
 import { handleListComponents } from "./tools/components.js";
 import { handleGenerate } from "./tools/generate.js";
+import { handleStream } from "./tools/stream.js";
 import { errorResult, type ToolResult } from "./tools/result.js";
 
 interface ToolRegistrar {
@@ -59,6 +61,18 @@ export function registerMontageTools(server: ToolRegistrar, client: MontageApiCl
       annotations: { openWorldHint: true },
     },
     withToolErrors((args) => handleGenerate(client, args as never)),
+  );
+
+  server.registerTool(
+    "montage_stream",
+    {
+      title: "Stream Montage UI",
+      description:
+        "Generate a Montage UI artifact with progressive shell, slot, and final artifact events. Returns the raw stream events and final HTML.",
+      inputSchema: StreamInputSchema.shape,
+      annotations: { openWorldHint: true },
+    },
+    withToolErrors((args) => handleStream(client, args as never)),
   );
 
   server.registerTool(
@@ -159,4 +173,3 @@ function withToolErrors(callback: (args: unknown) => Promise<ToolResult>) {
     }
   };
 }
-

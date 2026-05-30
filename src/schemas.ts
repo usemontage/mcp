@@ -24,6 +24,8 @@ export const GenerateInputSchema = z.object({
   backendType: z.enum(["fluxUI", "fluxAOT"]).optional().describe("Montage render backend."),
   interactive: z.boolean().optional().describe("Generate a mutable app instead of a read-only artifact."),
   hosted: z.boolean().optional().describe("Persist the artifact and return a hosted URL."),
+  includeHtml: z.boolean().optional().describe("Ask the API to include compiled HTML in the response."),
+  streaming: z.boolean().optional().describe("Request progressive generation events when supported."),
   strictData: z.boolean().optional().describe("Fail closed when required data cannot be validated."),
   requiredFields: z.array(z.string()).optional().describe("Fields that must appear in the artifact."),
   requiredCapabilities: z
@@ -35,6 +37,8 @@ export const GenerateInputSchema = z.object({
     .optional()
     .describe("Cache behavior for generation."),
   zeroed: z.boolean().optional().describe("Start mutable collections empty instead of seeded."),
+  artifactId: z.string().optional().describe("Existing artifact ID for updates."),
+  requestId: z.string().optional().describe("Caller-generated request ID for tracing."),
 });
 
 export const GetArtifactInputSchema = z.object({
@@ -52,6 +56,10 @@ export const GetVersionsInputSchema = z.object({
 });
 
 export const ListComponentsInputSchema = z.object({});
+
+export const StreamInputSchema = GenerateInputSchema.extend({
+  streaming: z.literal(true).optional().describe("Always enabled for montage_stream."),
+});
 
 export const ConfigureAdapterInputSchema = z
   .object({
@@ -75,8 +83,8 @@ export const ConfigureAdapterInputSchema = z
 export const ListAdaptersInputSchema = z.object({});
 
 export type GenerateInput = z.infer<typeof GenerateInputSchema>;
+export type StreamInput = z.infer<typeof StreamInputSchema>;
 export type GetArtifactInput = z.infer<typeof GetArtifactInputSchema>;
 export type ListArtifactsInput = z.infer<typeof ListArtifactsInputSchema>;
 export type GetVersionsInput = z.infer<typeof GetVersionsInputSchema>;
 export type ConfigureAdapterInput = z.infer<typeof ConfigureAdapterInputSchema>;
-
